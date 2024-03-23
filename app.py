@@ -1,22 +1,11 @@
 import tkinter as tk
-from PIL import ImageGrab, ImageEnhance, ImageFilter
+from PIL import ImageGrab
 import pytesseract
 import pyperclip
 import threading
 
-# Descomente e ajuste o caminho abaixo se o Tesseract não estiver no PATH do seu sistema
-# pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
-custom_config = r"--oem 3 --psm 6"
-
-
-def preprocess_image(image):
-    image = image.convert("L")
-    image = image.filter(ImageFilter.MedianFilter())
-    enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(2)
-    image = image.point(lambda x: 0 if x < 140 else 255)
-    return image
+# Configuração básica do pytesseract (descomente e ajuste se necessário)
+# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
 class ScreenCaptureTool:
@@ -40,21 +29,20 @@ class ScreenCaptureTool:
         self.start_x = event.x
         self.start_y = event.y
         self.selection = self.canvas.create_rectangle(
-            self.start_x, self.start_y, self.start_x, self.start_y, outline="red"
+            self.start_x, self.start_y, 0, 0, outline="red"
         )
 
     def on_move_press(self, event):
         self.canvas.coords(self.selection, self.start_x, self.start_y, event.x, event.y)
 
     def on_button_release(self, event):
-        x1, y1, x2, y2 = self.canvas.coords(self.selection)
-        self.capture_screen_area(x1, y1, x2, y2)
+        self.capture_screen_area(self.canvas.coords(self.selection))
         self.root.quit()
 
-    def capture_screen_area(self, x1, y1, x2, y2):
+    def capture_screen_area(self, coords):
+        x1, y1, x2, y2 = sorted(coords[:2]) + sorted(coords[2:])
         screenshot = ImageGrab.grab((x1, y1, x2, y2))
-        processed_image = preprocess_image(screenshot)
-        texto = pytesseract.image_to_string(processed_image, config=custom_config)
+        texto = pytesseract.image_to_string(screenshot)
         pyperclip.copy(texto)
         print("Texto copiado para a área de transferência.")
 
@@ -67,4 +55,5 @@ def iniciar_captura():
     captura.run()
 
 
+# Executar em uma thread separada
 threading.Thread(target=iniciar_captura).start()
